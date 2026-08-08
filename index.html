@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VAYUVAHAK — Indigenous Logistics Drone System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<header>
+  <div class="navbar">
+    <a href="index.html" class="brand"><span class="dot"></span>VAYUVAHAK</a>
+    <nav class="mainnav">
+      <a href="index.html" class="active">Home</a>
+      <a href="capabilities.html">Capability</a>
+      <a href="scenarios.html">Scenarios</a>
+      <a href="roadmap.html">Roadmap</a>
+      <a href="program.html">Program</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="status-bar">
+      <span><span class="pulse"></span> PROJECT STATUS: PROTOTYPE PHASE</span>
+      <span class="mono">CLASSIFICATION: UNCLASSIFIED — PROJECT BRIEF</span>
+      <span class="mono">ORIGIN: INDIGENOUS DEVELOPMENT PROGRAM</span>
+    </div>
+
+    <div class="eyebrow">Autonomous Logistics Platform</div>
+    <h1>Vayuvahak — <em>indigenous</em><br>logistics drone system</h1>
+    <p class="sub">A self-reliant unmanned aerial resupply platform built to move payloads across difficult terrain — cutting dependency on manned convoys, foot-carried resupply, and imported platforms.</p>
+
+    <div class="hero-cta">
+      <a href="program.html" class="btn solid">Read Mission Brief</a>
+      <a href="capabilities.html" class="btn">View Capability Data</a>
+    </div>
+
+    <div class="mapcard">
+      <div class="maphead">
+        <span>ROUTE SIM — SUPPLY BASE ⟶ FORWARD POST</span>
+        <span id="clock">T+00:00:00</span>
+      </div>
+      <svg id="route" viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="1" fill="rgba(238,231,218,0.08)"/>
+          </pattern>
+        </defs>
+        <rect width="900" height="260" fill="url(#dots)"/>
+        <path d="M0,210 C120,190 180,150 260,160 C340,170 380,120 460,110 C540,100 580,150 660,140 C740,130 800,170 900,150" fill="none" stroke="rgba(107,123,140,0.35)" stroke-width="1"/>
+        <path d="M0,230 C140,225 220,200 320,205 C420,210 480,180 560,185 C660,190 720,215 900,205" fill="none" stroke="rgba(107,123,140,0.2)" stroke-width="1"/>
+        <path id="path" d="M70,150 C220,60 320,220 470,120 C600,40 700,190 830,90" fill="none" stroke="var(--sand)" stroke-width="1.4" stroke-dasharray="4 6" opacity="0.55"/>
+        <circle cx="70" cy="150" r="6" fill="none" stroke="var(--amber)" stroke-width="1.5"/>
+        <circle cx="70" cy="150" r="2" fill="var(--amber)"/>
+        <text x="70" y="176" fill="var(--steel)" font-family="IBM Plex Mono" font-size="10" text-anchor="middle">SUPPLY BASE</text>
+        <circle cx="470" cy="120" r="4" fill="none" stroke="var(--steel)" stroke-width="1.2"/>
+        <text x="470" y="105" fill="var(--steel)" font-family="IBM Plex Mono" font-size="9" text-anchor="middle">WP-02 · 4200M</text>
+        <circle cx="830" cy="90" r="6" fill="none" stroke="#7ea86b" stroke-width="1.5"/>
+        <circle cx="830" cy="90" r="2" fill="#7ea86b"/>
+        <text x="830" y="76" fill="var(--steel)" font-family="IBM Plex Mono" font-size="10" text-anchor="middle">FORWARD POST</text>
+        <circle id="dot" r="5" fill="var(--amber)">
+          <animateMotion dur="6s" repeatCount="indefinite" rotate="auto">
+            <mpath href="#path"/>
+          </animateMotion>
+        </circle>
+      </svg>
+
+      <div class="telemetry">
+        <div class="t"><div class="num" id="tel-payload">0</div><div class="lab">Payload Class (kg)</div></div>
+        <div class="t"><div class="num" id="tel-range">0</div><div class="lab">Design Range (km)</div></div>
+        <div class="t"><div class="num" id="tel-alt">0</div><div class="lab">Ops Ceiling (m)</div></div>
+        <div class="t"><div class="num" id="tel-endurance">0</div><div class="lab">Endurance (min)</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="gap" class="tight">
+  <div class="wrap">
+    <div class="eyebrow">Operational Gap</div>
+    <h2>What's slowing logistics today</h2>
+    <div class="gap-grid">
+      <div class="gap-item">
+        <div class="n mono">01</div>
+        <h3>Terrain lock-out</h3>
+        <p>High-altitude and monsoon-cut routes strand ground convoys for days, forcing posts to stockpile against uncertainty rather than resupply on demand.</p>
+      </div>
+      <div class="gap-item">
+        <div class="n mono">02</div>
+        <h3>Personnel exposure</h3>
+        <p>Foot-carried and convoy resupply puts personnel on exposed routes for tasks that don't need a person on that route at all.</p>
+      </div>
+      <div class="gap-item">
+        <div class="n mono">03</div>
+        <h3>Import dependency</h3>
+        <p>Reliance on externally sourced platforms ties spares, upgrades, and software into a supply chain the operator doesn't control.</p>
+      </div>
+      <div class="gap-item">
+        <div class="n mono">04</div>
+        <h3>Slow last-mile response</h3>
+        <p>Medical, ration, and equipment resupply for isolated outposts can lag well behind the moment the need is identified.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="explore">
+  <div class="wrap">
+    <div class="eyebrow">Explore The Project</div>
+    <h2>Four pages, one program</h2>
+    <div class="link-grid">
+      <a href="program.html" class="link-card">
+        <div class="lc-n mono">01</div>
+        <h3>Mission Brief</h3>
+        <p>Why the program exists and what problem it solves, plus the indigenous-development angle.</p>
+        <div class="go">READ BRIEF →</div>
+      </a>
+      <a href="capabilities.html" class="link-card">
+        <div class="lc-n mono">02</div>
+        <h3>Capability Stack</h3>
+        <p>Full feature set, platform variants, and the illustrative spec envelope.</p>
+        <div class="go">VIEW SPECS →</div>
+      </a>
+      <a href="scenarios.html" class="link-card">
+        <div class="lc-n mono">03</div>
+        <h3>Deployment Scenarios</h3>
+        <p>Mission profiles for high-altitude resupply, disaster relief, and border sustainment.</p>
+        <div class="go">SEE SCENARIOS →</div>
+      </a>
+      <a href="roadmap.html" class="link-card">
+        <div class="lc-n mono">04</div>
+        <h3>Development Roadmap</h3>
+        <p>Four phases from concept freeze through series-production readiness.</p>
+        <div class="go">VIEW ROADMAP →</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>VAYUVAHAK — INDIGENOUS LOGISTICS DRONE SYSTEM · PROJECT BRIEF</p>
+    <nav>
+      <a href="program.html">Program</a>
+      <a href="capabilities.html">Capability</a>
+      <a href="scenarios.html">Scenarios</a>
+      <a href="roadmap.html">Roadmap</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="assets/script.js"></script>
+</body>
+</html>

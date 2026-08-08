@@ -1,0 +1,14 @@
+# Indigenous Logistics Drone (ILD) System — dependencies
+#
+# This project is intentionally dependency-free: code.py, mesh_builder.py,
+# and exporter.py use only the Python standard library (math, csv, json,
+# dataclasses, datetime, typing). No packages need to be installed.
+#
+# Requires: Python 3.8+
+#
+# If you later want to load the exported .stl/.obj into a Python-based
+# viewer or do heavier mesh math, these optional packages are commonly
+# used (uncomment as needed):
+# numpy>=1.24
+# numpy-stl>=3.0
+# trimesh>=4.0
