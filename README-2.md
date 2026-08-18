@@ -140,3 +140,6 @@ export_stl(mesh, "my_drone.stl")
 ## License
 
 Academic project — for educational use.
+
+##prototype video :
+https://youtu.be/4kJgMOXadxM?si=HypMTsGXbxsIU2Ne
