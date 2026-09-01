@@ -1,0 +1,1874 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INDILOG-UAV | Indigenous Logistics Drones for Operational Readiness</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        tactical: {
+                            900: '#070c0e',
+                            800: '#0d181c',
+                            700: '#14252c',
+                            600: '#1e3842',
+                            accent: '#00f0ff',
+                            amber: '#ffb703',
+                            emerald: '#00f59b',
+                            crimson: '#ff3366',
+                            hud: 'rgba(0, 240, 255, 0.15)'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'Courier New', 'monospace'],
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+        body {
+            background-color: #050a0d;
+            color: #d1e8e2;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.05) 0%, transparent 70%),
+                linear-gradient(rgba(0, 240, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+        }
+
+        .hud-border {
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.05), inset 0 0 15px rgba(0, 240, 255, 0.03);
+            position: relative;
+        }
+
+        .hud-border::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: 8px;
+            height: 8px;
+            border-top: 2px solid #00f0ff;
+            border-left: 2px solid #00f0ff;
+        }
+
+        .hud-border::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 8px;
+            height: 8px;
+            border-bottom: 2px solid #00f0ff;
+            border-right: 2px solid #00f0ff;
+        }
+
+        .glow-cyan {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+        }
+        .glow-amber {
+            text-shadow: 0 0 10px rgba(255, 183, 3, 0.6);
+        }
+        .glow-emerald {
+            text-shadow: 0 0 10px rgba(0, 245, 155, 0.6);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #070c0e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e3842;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00f0ff;
+        }
+
+        /* Radar sweep animation */
+        @keyframes radar-sweep {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .radar-sweeper {
+            animation: radar-sweep 4s linear infinite;
+            transform-origin: center center;
+        }
+
+        /* Print styles for OPORD export */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-tactical-accent selection:text-black">
+
+    <!-- Top Strategic Navigation Bar -->
+    <header class="sticky top-0 z-50 bg-tactical-900/90 backdrop-blur-md border-b border-tactical-600/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Branding -->
+                <div class="flex items-center space-x-3">
+                    <div class="relative flex items-center justify-center w-10 h-10 rounded-lg bg-tactical-800 border border-tactical-accent/40">
+                        <i class="fa-solid fa-crosshairs text-tactical-accent text-xl animate-pulse"></i>
+                        <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-tactical-emerald rounded-full"></span>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-mono font-bold text-lg text-white tracking-wider">INDILOG<span class="text-tactical-accent">-UAV</span></span>
+                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-tactical-accent/10 text-tactical-accent border border-tactical-accent/30">DEF-TECH V4.2</span>
+                        </div>
+                        <p class="text-[11px] text-gray-400 font-mono hidden sm:block">INDIGENOUS LOGISTICS DRONES FOR OPERATIONAL CAPABILITY</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden md:flex space-x-1 font-mono text-xs">
+                    <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="nav-tab px-3.5 py-2 rounded transition-all flex items-center space-x-2 bg-tactical-accent/15 text-tactical-accent border border-tactical-accent/40 font-semibold">
+                        <i class="fa-solid fa-satellite-dish"></i>
+                        <span>C2 DASHBOARD</span>
+                    </button>
+                    <button onclick="switchTab('fleet')" id="tab-btn-fleet" class="nav-tab px-3.5 py-2 rounded transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-tactical-800">
+                        <i class="fa-solid fa-jet-fighter-up"></i>
+                        <span>FLEET SPECS</span>
+                    </button>
+                    <button onclick="switchTab('mission')" id="tab-btn-mission" class="nav-tab px-3.5 py-2 rounded transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-tactical-800">
+                        <i class="fa-solid fa-route"></i>
+                        <span>MISSION SIMULATOR</span>
+                    </button>
+                    <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="nav-tab px-3.5 py-2 rounded transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-tactical-800">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>LOGISTICS MATRIX</span>
+                    </button>
+                    <button onclick="switchTab('tech')" id="tab-btn-tech" class="nav-tab px-3.5 py-2 rounded transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-tactical-800">
+                        <i class="fa-solid fa-microchip"></i>
+                        <span>INDIGENOUS TECH</span>
+                    </button>
+                </nav>
+
+                <!-- Status & Audio Control -->
+                <div class="flex items-center space-x-3 font-mono text-xs">
+                    <div class="hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded bg-tactical-800/80 border border-tactical-600/40">
+                        <span class="w-2 h-2 rounded-full bg-tactical-emerald animate-ping"></span>
+                        <span class="text-gray-300 text-[11px]">NavIC LINK: <strong class="text-tactical-emerald">ONLINE (8 SAT)</strong></span>
+                    </div>
+
+                    <button id="sound-toggle" onclick="toggleAudio()" class="p-2 rounded bg-tactical-800 hover:bg-tactical-700 text-gray-300 hover:text-tactical-accent border border-tactical-600/50 transition-colors" title="Toggle Tactical Audio Feedback">
+                        <i class="fa-solid fa-volume-high text-xs" id="sound-icon"></i>
+                    </button>
+
+                    <button onclick="exportMissionReport()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded bg-tactical-emerald/20 hover:bg-tactical-emerald/30 text-tactical-emerald border border-tactical-emerald/50 font-bold transition-all shadow-[0_0_10px_rgba(0,245,155,0.2)]">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>OPORD EXPORT</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Navigation Menu Bar -->
+        <div class="md:hidden flex overflow-x-auto py-2 px-4 space-x-2 bg-tactical-800/90 border-t border-tactical-700/50 font-mono text-xs">
+            <button onclick="switchTab('dashboard')" class="mobile-tab-btn flex-shrink-0 px-3 py-1.5 rounded bg-tactical-accent/20 text-tactical-accent">C2 Live</button>
+            <button onclick="switchTab('fleet')" class="mobile-tab-btn flex-shrink-0 px-3 py-1.5 rounded text-gray-400 hover:text-white">Fleet Specs</button>
+            <button onclick="switchTab('mission')" class="mobile-tab-btn flex-shrink-0 px-3 py-1.5 rounded text-gray-400 hover:text-white">Mission Sim</button>
+            <button onclick="switchTab('analytics')" class="mobile-tab-btn flex-shrink-0 px-3 py-1.5 rounded text-gray-400 hover:text-white">Cost Matrix</button>
+            <button onclick="switchTab('tech')" class="mobile-tab-btn flex-shrink-0 px-3 py-1.5 rounded text-gray-400 hover:text-white">Indig. Tech</button>
+        </div>
+    </header>
+
+    <!-- Operational Banner / Strategic Notice -->
+    <div class="bg-gradient-to-r from-tactical-900 via-tactical-800 to-tactical-900 border-b border-tactical-accent/20 py-2">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between text-xs font-mono gap-2">
+            <div class="flex items-center space-x-2">
+                <span class="px-2 py-0.5 bg-tactical-amber/20 text-tactical-amber border border-tactical-amber/40 rounded text-[10px] font-bold uppercase tracking-wider">STRATEGIC FOCUS</span>
+                <span class="text-gray-300 text-[11px] sm:text-xs">Enhancing Last-Mile Autonomous Tactical Resupply for High-Altitude Frontiers, Island Outposts & Disaster Zones.</span>
+            </div>
+            <div class="flex items-center space-x-4 text-[11px] text-gray-400">
+                <span>OPERATIONAL READINESS: <strong class="text-tactical-emerald">98.4%</strong></span>
+                <span class="hidden sm:inline">SORTIES COMPLETED: <strong class="text-white">1,482</strong></span>
+                <span class="hidden md:inline">PAYLOAD MOVED: <strong class="text-tactical-accent">42.8 TONS</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- ==================== TAB 1: COMMAND & CONTROL (C2) DASHBOARD ==================== -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <!-- Strategic KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
+                <!-- KPI 1 -->
+                <div class="hud-border bg-tactical-900/80 p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-gray-400 uppercase">Active Logistics Sorties</span>
+                        <i class="fa-solid fa-plane-departure text-tactical-accent text-sm"></i>
+                    </div>
+                    <div class="mt-2 flex items-baseline justify-between">
+                        <div class="text-2xl font-bold text-white font-mono" id="active-sorties-counter">14</div>
+                        <span class="text-xs text-tactical-emerald flex items-center font-bold">
+                            <i class="fa-solid fa-arrow-up text-[10px] mr-1"></i> +24% v/s Convoys
+                        </span>
+                    </div>
+                    <div class="mt-3 text-[11px] text-gray-400 border-t border-tactical-700/50 pt-2 flex justify-between">
+                        <span>High-Altitude Resupply</span>
+                        <span class="text-tactical-accent font-semibold">8 Airborne</span>
+                    </div>
+                </div>
+
+                <!-- KPI 2 -->
+                <div class="hud-border bg-tactical-900/80 p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-gray-400 uppercase">High Altitude Ceiling</span>
+                        <i class="fa-solid fa-mountain text-tactical-amber text-sm"></i>
+                    </div>
+                    <div class="mt-2 flex items-baseline justify-between">
+                        <div class="text-2xl font-bold text-tactical-amber font-mono">18,500 <span class="text-xs font-normal text-gray-300">FT</span></div>
+                        <span class="text-xs text-tactical-amber flex items-center font-bold">
+                            <i class="fa-solid fa-shield-halved text-[10px] mr-1"></i> Siachen Certified
+                        </span>
+                    </div>
+                    <div class="mt-3 text-[11px] text-gray-400 border-t border-tactical-700/50 pt-2 flex justify-between">
+                        <span>Max Payload at Ceiling</span>
+                        <span class="text-tactical-amber font-semibold">50.0 kg Heavy</span>
+                    </div>
+                </div>
+
+                <!-- KPI 3 -->
+                <div class="hud-border bg-tactical-900/80 p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-gray-400 uppercase">Turnaround Time Delta</span>
+                        <i class="fa-solid fa-stopwatch text-tactical-emerald text-sm"></i>
+                    </div>
+                    <div class="mt-2 flex items-baseline justify-between">
+                        <div class="text-2xl font-bold text-tactical-emerald font-mono">-88.5%</div>
+                        <span class="text-xs text-tactical-emerald flex items-center font-bold">
+                            <i class="fa-solid fa-bolt text-[10px] mr-1"></i> Rapid Delivery
+                        </span>
+                    </div>
+                    <div class="mt-3 text-[11px] text-gray-400 border-t border-tactical-700/50 pt-2 flex justify-between">
+                        <span>Convoy: 22h &rarr; Drone</span>
+                        <span class="text-tactical-emerald font-semibold">35 Minutes</span>
+                    </div>
+                </div>
+
+                <!-- KPI 4 -->
+                <div class="hud-border bg-tactical-900/80 p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs text-gray-400 uppercase">Indigenization Index</span>
+                        <i class="fa-solid fa-atom text-tactical-accent text-sm"></i>
+                    </div>
+                    <div class="mt-2 flex items-baseline justify-between">
+                        <div class="text-2xl font-bold text-white font-mono">92.4%</div>
+                        <span class="text-xs text-tactical-accent flex items-center font-bold">
+                            <i class="fa-solid fa-check-double text-[10px] mr-1"></i> Make In India
+                        </span>
+                    </div>
+                    <div class="mt-3 text-[11px] text-gray-400 border-t border-tactical-700/50 pt-2 flex justify-between">
+                        <span>NavIC / Secure Comms</span>
+                        <span class="text-tactical-accent font-semibold">100% Sovereign</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Central Tactical Map & Live Telemetry Feed -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Tactical Map & Radar Visualizer (2 Cols) -->
+                <div class="lg:col-span-2 hud-border bg-tactical-900/90 rounded-lg p-4 flex flex-col space-y-4">
+                    <div class="flex flex-wrap items-center justify-between border-b border-tactical-700/60 pb-3 gap-2">
+                        <div class="flex items-center space-x-2 font-mono">
+                            <span class="w-2.5 h-2.5 rounded-full bg-tactical-accent animate-pulse"></span>
+                            <h2 class="text-sm font-bold text-white uppercase tracking-wider">TACTICAL SECTOR LOGISTICS GRID (SECTOR NORTH)</h2>
+                        </div>
+                        <div class="flex items-center space-x-2 font-mono text-xs">
+                            <span class="text-gray-400">Map Mode:</span>
+                            <button onclick="toggleMapMode('tactical')" id="btn-map-tac" class="px-2 py-1 rounded bg-tactical-accent/20 text-tactical-accent border border-tactical-accent/40 font-bold">Tactical</button>
+                            <button onclick="toggleMapMode('elevation')" id="btn-map-elev" class="px-2 py-1 rounded bg-tactical-800 text-gray-400 hover:text-white">Terrain Elevation</button>
+                            <button onclick="triggerSpawnDrone()" class="px-2.5 py-1 rounded bg-tactical-emerald/20 text-tactical-emerald border border-tactical-emerald/40 hover:bg-tactical-emerald/30 font-bold">
+                                <i class="fa-solid fa-plus mr-1"></i> New Sortie
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Interactive Map Area -->
+                    <div class="relative w-full h-[380px] sm:h-[430px] rounded bg-tactical-900 overflow-hidden border border-tactical-700/50">
+                        <canvas id="tacticalMapCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+                        
+                        <!-- Radar Sweep Overlay (Top Right Mini HUD) -->
+                        <div class="absolute top-3 right-3 w-28 h-28 rounded-full border border-tactical-accent/40 bg-tactical-900/80 backdrop-blur pointer-events-none flex items-center justify-center overflow-hidden hidden sm:flex">
+                            <div class="w-full h-full absolute radar-sweeper" style="background: conic-gradient(from 0deg at 50% 50%, rgba(0, 240, 255, 0.4) 0deg, rgba(0, 240, 255, 0.05) 60deg, transparent 61deg);"></div>
+                            <div class="w-20 h-20 rounded-full border border-tactical-accent/20"></div>
+                            <div class="w-10 h-10 rounded-full border border-tactical-accent/20"></div>
+                            <div class="absolute text-[9px] font-mono text-tactical-accent bottom-1 font-bold">RADAR-360</div>
+                        </div>
+
+                        <!-- Tactical Overlay HUD Info -->
+                        <div class="absolute bottom-3 left-3 bg-tactical-900/85 backdrop-blur border border-tactical-600/60 p-2.5 rounded font-mono text-[11px] space-y-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-gray-400">SECTOR:</span>
+                                <span class="text-white font-bold">HIGH-ALTITUDE NORTH-WEST [HIMALAYAN CORRIDOR]</span>
+                            </div>
+                            <div class="flex items-center space-x-4 text-gray-400">
+                                <span>WIND: <strong class="text-tactical-amber">32 KTS @ 310Â° NW</strong></span>
+                                <span>TEMP: <strong class="text-tactical-accent">-14Â°C</strong></span>
+                                <span>JAMMING LEVEL: <strong class="text-tactical-emerald">LOW (FHSS ACTIVE)</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Live Drone Tooltip Prompt -->
+                        <div class="absolute top-3 left-3 font-mono text-[10px] text-gray-400 bg-tactical-900/75 px-2 py-1 rounded border border-tactical-700/50">
+                            <i class="fa-solid fa-hand-pointer mr-1 text-tactical-accent"></i> Click any waypoint or airborne drone to inspect telemetry
+                        </div>
+                    </div>
+
+                    <!-- Mission Waypoint Progress Bar -->
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 font-mono text-xs pt-1">
+                        <div class="bg-tactical-800/80 p-2 rounded border border-tactical-700/40">
+                            <div class="text-[10px] text-gray-400">DEP: MAIN LOGISTIC BASE</div>
+                            <div class="text-white font-bold flex items-center justify-between mt-0.5">
+                                <span>MLB-TRISHUL</span>
+                                <span class="text-tactical-emerald text-[10px]"><i class="fa-solid fa-check"></i> DISPATCHED</span>
+                            </div>
+                        </div>
+                        <div class="bg-tactical-800/80 p-2 rounded border border-tactical-700/40">
+                            <div class="text-[10px] text-gray-400">TRANSIT: MOUNTAIN PASS ALPHA</div>
+                            <div class="text-white font-bold flex items-center justify-between mt-0.5">
+                                <span>PASS-15.2K FT</span>
+                                <span class="text-tactical-accent text-[10px]"><i class="fa-solid fa-spinner fa-spin"></i> EN-ROUTE</span>
+                            </div>
+                        </div>
+                        <div class="bg-tactical-800/80 p-2 rounded border border-tactical-700/40">
+                            <div class="text-[10px] text-gray-400">DEST: FORWARD POST DELTA</div>
+                            <div class="text-white font-bold flex items-center justify-between mt-0.5">
+                                <span>FOB-VALKYRIE</span>
+                                <span class="text-tactical-amber text-[10px]">ETA: 12 MIN</span>
+                            </div>
+                        </div>
+                        <div class="bg-tactical-800/80 p-2 rounded border border-tactical-700/40">
+                            <div class="text-[10px] text-gray-400">DELIVERY METHOD</div>
+                            <div class="text-white font-bold flex items-center justify-between mt-0.5">
+                                <span>PRECISION WINCH</span>
+                                <span class="text-tactical-emerald text-[10px]">ZERO-LANDING</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time Selected Sortie Telemetry Panel (1 Col) -->
+                <div class="hud-border bg-tactical-900/90 rounded-lg p-4 flex flex-col justify-between font-mono space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-tactical-700/60 pb-3">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-tower-broadcast text-tactical-accent"></i>
+                                <span class="text-sm font-bold text-white">ACTIVE TELEMETRY</span>
+                            </div>
+                            <span class="px-2 py-0.5 text-[10px] rounded bg-tactical-emerald/20 text-tactical-emerald font-bold border border-tactical-emerald/40 animate-pulse">
+                                LIVE FEED
+                            </span>
+                        </div>
+
+                        <!-- Active Drone Identification -->
+                        <div class="mt-4 p-3 bg-tactical-800/90 rounded border border-tactical-accent/30 flex items-center justify-between">
+                            <div>
+                                <div class="text-[10px] text-gray-400">CALLSIGN / PLATFORM</div>
+                                <div class="text-base font-bold text-white tracking-wide" id="telemetry-callsign">GARUDA-HL-04</div>
+                                <div class="text-[11px] text-tactical-accent" id="telemetry-type">Hybrid Heavy-Lift VTOL</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[10px] text-gray-400">PAYLOAD TYPE</div>
+                                <div class="text-xs font-bold text-tactical-amber" id="telemetry-cargo">Emergency Ammo & Plasma</div>
+                                <div class="text-[11px] text-gray-300" id="telemetry-weight">45.0 kg / 50.0 kg max</div>
+                            </div>
+                        </div>
+
+                        <!-- Telemetry Gauges Grid -->
+                        <div class="grid grid-cols-2 gap-3 mt-4 text-xs">
+                            <div class="bg-tactical-800/60 p-2.5 rounded border border-tactical-700/40">
+                                <span class="text-gray-400 text-[10px] block">AIRSPEED</span>
+                                <div class="text-lg font-bold text-white mt-0.5" id="telemetry-speed">112 <span class="text-xs font-normal text-gray-400">km/h</span></div>
+                                <div class="w-full bg-tactical-700/50 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                                    <div class="bg-tactical-accent h-full w-[75%]"></div>
+                                </div>
+                            </div>
+
+                            <div class="bg-tactical-800/60 p-2.5 rounded border border-tactical-700/40">
+                                <span class="text-gray-400 text-[10px] block">ALTITUDE (MSL)</span>
+                                <div class="text-lg font-bold text-white mt-0.5" id="telemetry-altitude">14,820 <span class="text-xs font-normal text-gray-400">ft</span></div>
+                                <div class="w-full bg-tactical-700/50 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                                    <div class="bg-tactical-amber h-full w-[80%]"></div>
+                                </div>
+                            </div>
+
+                            <div class="bg-tactical-800/60 p-2.5 rounded border border-tactical-700/40">
+                                <span class="text-gray-400 text-[10px] block">BATTERY / HYBRID FUEL</span>
+                                <div class="text-lg font-bold text-tactical-emerald mt-0.5" id="telemetry-power">84% <span class="text-xs font-normal text-gray-400">(48m REM)</span></div>
+                                <div class="w-full bg-tactical-700/50 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                                    <div class="bg-tactical-emerald h-full w-[84%]"></div>
+                                </div>
+                            </div>
+
+                            <div class="bg-tactical-800/60 p-2.5 rounded border border-tactical-700/40">
+                                <span class="text-gray-400 text-[10px] block">NavIC ACCURACY</span>
+                                <div class="text-lg font-bold text-tactical-accent mt-0.5">0.42 <span class="text-xs font-normal text-gray-400">meters</span></div>
+                                <div class="w-full bg-tactical-700/50 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                                    <div class="bg-tactical-accent h-full w-[95%]"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Subsystems Health Checklist -->
+                        <div class="mt-4 space-y-1.5 text-[11px]">
+                            <div class="flex items-center justify-between text-gray-300">
+                                <span><i class="fa-solid fa-shield-virus text-tactical-emerald mr-1.5"></i> Anti-Jamming FHSS Link</span>
+                                <span class="text-tactical-emerald font-bold">SECURE (AES-256)</span>
+                            </div>
+                            <div class="flex items-center justify-between text-gray-300">
+                                <span><i class="fa-solid fa-snowflake text-tactical-accent mr-1.5"></i> Rotor De-Icing Thermal System</span>
+                                <span class="text-tactical-accent font-bold">ACTIVE (65Â°C)</span>
+                            </div>
+                            <div class="flex items-center justify-between text-gray-300">
+                                <span><i class="fa-solid fa-camera text-tactical-amber mr-1.5"></i> Optical Flow Terrain Matching</span>
+                                <span class="text-tactical-amber font-bold">LOCKED</span>
+                            </div>
+                            <div class="flex items-center justify-between text-gray-300">
+                                <span><i class="fa-solid fa-parachute-box text-tactical-emerald mr-1.5"></i> Precision Payload Winch/Drop</span>
+                                <span class="text-tactical-emerald font-bold">READY</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tactical Quick Action Controls -->
+                    <div class="pt-3 border-t border-tactical-700/60 space-y-2">
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <button onclick="executeAction('WINCH_DROP')" class="px-3 py-2 rounded bg-tactical-accent/20 hover:bg-tactical-accent/30 text-tactical-accent border border-tactical-accent/50 font-bold transition-all flex items-center justify-center space-x-1.5">
+                                <i class="fa-solid fa-arrow-down"></i>
+                                <span>INITIATE WINCH</span>
+                            </button>
+                            <button onclick="executeAction('RTB')" class="px-3 py-2 rounded bg-tactical-amber/20 hover:bg-tactical-amber/30 text-tactical-amber border border-tactical-amber/50 font-bold transition-all flex items-center justify-center space-x-1.5">
+                                <i class="fa-solid fa-rotate-left"></i>
+                                <span>RETURN TO BASE</span>
+                            </button>
+                        </div>
+                        <button onclick="executeAction('EMERGENCY_HOVER')" class="w-full px-3 py-2 rounded bg-tactical-crimson/20 hover:bg-tactical-crimson/30 text-tactical-crimson border border-tactical-crimson/50 font-bold text-xs transition-all flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>GPS-DENIED FAILSAFE HOVER</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: FLEET PLATFORMS & SPECIFICATIONS ==================== -->
+        <section id="tab-fleet" class="tab-content hidden space-y-6">
+            <div class="border-b border-tactical-700/60 pb-3 flex flex-wrap items-center justify-between gap-3 font-mono">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-jet-fighter-up text-tactical-accent"></i>
+                        <span>INDIGENOUS LOGISTICS DRONE FLEET ARCHITECTURE</span>
+                    </h2>
+                    <p class="text-xs text-gray-400">Multi-tier autonomous unmanned aerial logistics ecosystem engineered for extreme environments.</p>
+                </div>
+                <div class="flex items-center space-x-2 text-xs">
+                    <span class="text-gray-400">Filter By Role:</span>
+                    <button onclick="filterFleet('all')" class="fleet-filter-btn px-2.5 py-1 rounded bg-tactical-accent/20 text-tactical-accent border border-tactical-accent/40 font-bold">All</button>
+                    <button onclick="filterFleet('heavy')" class="fleet-filter-btn px-2.5 py-1 rounded bg-tactical-800 text-gray-400 hover:text-white">Heavy-Lift</button>
+                    <button onclick="filterFleet('high_altitude')" class="fleet-filter-btn px-2.5 py-1 rounded bg-tactical-800 text-gray-400 hover:text-white">Extreme Altitude</button>
+                    <button onclick="filterFleet('swarm')" class="fleet-filter-btn px-2.5 py-1 rounded bg-tactical-800 text-gray-400 hover:text-white">Swarm Supply</button>
+                </div>
+            </div>
+
+            <!-- Drone Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <!-- Platform 1: Garuda Heavy-Lift Hybrid VTOL -->
+                <div class="fleet-card hud-border bg-tactical-900/90 rounded-lg p-5 flex flex-col justify-between" data-category="heavy">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-tactical-accent/15 text-tactical-accent border border-tactical-accent/40 font-bold">HEAVY TACTICAL RESUPPLY</span>
+                                <h3 class="text-lg font-bold text-white font-mono mt-1">GARUDA-HL 100</h3>
+                                <p class="text-xs text-gray-400">Hybrid-Electric Heavy-Lift VTOL</p>
+                            </div>
+                            <div class="w-10 h-10 rounded bg-tactical-800 border border-tactical-accent/30 flex items-center justify-center text-tactical-accent">
+                                <i class="fa-solid fa-helicopter text-lg"></i>
+                            </div>
+                        </div>
+
+                        <!-- Technical Specs Matrix -->
+                        <div class="mt-5 space-y-2.5 font-mono text-xs border-y border-tactical-700/60 py-3.5">
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-weight-hanging text-tactical-accent mr-1.5"></i> Max Payload:</span>
+                                <strong class="text-white">100.0 kg (220 lbs)</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-gauge-high text-tactical-amber mr-1.5"></i> Operational Range:</span>
+                                <strong class="text-white">120 km (Full Load)</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-mountain text-tactical-emerald mr-1.5"></i> Max Service Ceiling:</span>
+                                <strong class="text-tactical-emerald">16,500 ft (5,030 m)</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-bolt text-tactical-accent mr-1.5"></i> Propulsion:</span>
+                                <strong class="text-white">Hybrid Turbine + Quad VTOL</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-box-open text-tactical-amber mr-1.5"></i> Cargo Module:</span>
+                                <strong class="text-tactical-amber">Winch / Quick-Release Pod</strong>
+                            </div>
+                        </div>
+
+                        <p class="mt-3 text-xs text-gray-400 leading-relaxed">
+                            Designed for bulk ammunition transfer, cold-chain medical supplies, heavy mortar shells, and critical field hospital power units across isolated border posts.
+                        </p>
+                    </div>
+
+                    <div class="mt-5 pt-3 border-t border-tactical-700/50 flex items-center justify-between">
+                        <span class="text-[11px] font-mono text-tactical-emerald font-bold"><i class="fa-solid fa-circle-check mr-1"></i> TRL-9 DEPLOYED</span>
+                        <button onclick="selectDroneForSim('GARUDA-HL 100', 100, 120, 16500)" class="px-3 py-1.5 rounded bg-tactical-accent/20 hover:bg-tactical-accent/30 text-tactical-accent font-mono text-xs font-bold border border-tactical-accent/40 transition-all">
+                            Load in Simulator
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Platform 2: Trishul Extreme Altitude Hexacopter -->
+                <div class="fleet-card hud-border bg-tactical-900/90 rounded-lg p-5 flex flex-col justify-between" data-category="high_altitude">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-tactical-amber/15 text-tactical-amber border border-tactical-amber/40 font-bold">EXTREME ALTITUDE / SIACHEN</span>
+                                <h3 class="text-lg font-bold text-white font-mono mt-1">TRISHUL-50 HEXA</h3>
+                                <p class="text-xs text-gray-400">Sub-Zero All-Weather Multi-Rotor</p>
+                            </div>
+                            <div class="w-10 h-10 rounded bg-tactical-800 border border-tactical-amber/30 flex items-center justify-center text-tactical-amber">
+                                <i class="fa-solid fa-fan text-lg"></i>
+                            </div>
+                        </div>
+
+                        <!-- Technical Specs Matrix -->
+                        <div class="mt-5 space-y-2.5 font-mono text-xs border-y border-tactical-700/60 py-3.5">
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-weight-hanging text-tactical-accent mr-1.5"></i> Max Payload:</span>
+                                <strong class="text-white">50.0 kg (at 18,500 ft)</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-gauge-high text-tactical-amber mr-1.5"></i> Operational Range:</span>
+                                <strong class="text-white">45 km Combat Radius</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-mountain text-tactical-emerald mr-1.5"></i> Max Service Ceiling:</span>
+                                <strong class="text-tactical-emerald">20,000 ft (6,100 m)</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-snowflake text-tactical-accent mr-1.5"></i> Temp Operational Window:</span>
+                                <strong class="text-white">-40Â°C to +50Â°C</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-compass text-tactical-amber mr-1.5"></i> Navigation:</span>
+                                <strong class="text-tactical-amber">NavIC + Optical / LiDAR VIO</strong>
+                            </div>
+                        </div>
+
+                        <p class="mt-3 text-xs text-gray-400 leading-relaxed">
+                            Engineered with heated carbon-composite rotor blades and high-discharge low-temp solid-state lithium cells for continuous mountain ridge replenishment.
+                        </p>
+                    </div>
+
+                    <div class="mt-5 pt-3 border-t border-tactical-700/50 flex items-center justify-between">
+                        <span class="text-[11px] font-mono text-tactical-emerald font-bold"><i class="fa-solid fa-circle-check mr-1"></i> TRL-8 INDUCTED</span>
+                        <button onclick="selectDroneForSim('TRISHUL-50 HEXA', 50, 45, 20000)" class="px-3 py-1.5 rounded bg-tactical-accent/20 hover:bg-tactical-accent/30 text-tactical-accent font-mono text-xs font-bold border border-tactical-accent/40 transition-all">
+                            Load in Simulator
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Platform 3: Pushpak Autonomous Swarm Resupply -->
+                <div class="fleet-card hud-border bg-tactical-900/90 rounded-lg p-5 flex flex-col justify-between" data-category="swarm">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-tactical-emerald/15 text-tactical-emerald border border-tactical-emerald/40 font-bold">AUTONOMOUS SWARM RESUPPLY</span>
+                                <h3 class="text-lg font-bold text-white font-mono mt-1">PUSHPAK-SWARM</h3>
+                                <p class="text-xs text-gray-400">Coordinated Distributed Logistics Swarm</p>
+                            </div>
+                            <div class="w-10 h-10 rounded bg-tactical-800 border border-tactical-emerald/30 flex items-center justify-center text-tactical-emerald">
+                                <i class="fa-solid fa-network-wired text-lg"></i>
+                            </div>
+                        </div>
+
+                        <!-- Technical Specs Matrix -->
+                        <div class="mt-5 space-y-2.5 font-mono text-xs border-y border-tactical-700/60 py-3.5">
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-weight-hanging text-tactical-accent mr-1.5"></i> Swarm Collective Lift:</span>
+                                <strong class="text-white">200.0 kg (10 x 20kg Units)</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-gauge-high text-tactical-amber mr-1.5"></i> Operational Range:</span>
+                                <strong class="text-white">60 km Interlocking</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-mountain text-tactical-emerald mr-1.5"></i> Swarm Intelligence:</span>
+                                <strong class="text-tactical-emerald">Decentralized Mesh AI</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-shield-halved text-tactical-accent mr-1.5"></i> Attrition Tolerance:</span>
+                                <strong class="text-white">40% Loss Resilience</strong>
+                            </div>
+                            <div class="flex justify-between text-gray-300">
+                                <span class="text-gray-400"><i class="fa-solid fa-box text-tactical-amber mr-1.5"></i> Drop Dispersion:</span>
+                                <strong class="text-tactical-amber">Multi-Point Micro Drops</strong>
+                            </div>
+                        </div>
+
+                        <p class="mt-3 text-xs text-gray-400 leading-relaxed">
+                            Simultaneous multi-target distribution enabling rapid re-arming of dispersed combat squads under active electronic warfare with self-healing routing algorithms.
+                        </p>
+                    </div>
+
+                    <div class="mt-5 pt-3 border-t border-tactical-700/50 flex items-center justify-between">
+                        <span class="text-[11px] font-mono text-tactical-emerald font-bold"><i class="fa-solid fa-circle-check mr-1"></i> TRL-7 VALIDATED</span>
+                        <button onclick="selectDroneForSim('PUSHPAK-SWARM', 200, 60, 15000)" class="px-3 py-1.5 rounded bg-tactical-accent/20 hover:bg-tactical-accent/30 text-tactical-accent font-mono text-xs font-bold border border-tactical-accent/40 transition-all">
+                            Load in Simulator
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Operational Logistics Use Cases Showcase -->
+            <div class="hud-border bg-tactical-900/90 rounded-lg p-5 font-mono space-y-4">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                    <i class="fa-solid fa-truck-ramp-box text-tactical-accent"></i>
+                    <span>OPERATIONAL CAPABILITY ENHANCEMENTS & TACTICAL ROLES</span>
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                    <div class="p-3.5 bg-tactical-800/60 rounded border border-tactical-700/50 space-y-2">
+                        <div class="text-tactical-accent font-bold flex items-center space-x-2">
+                            <i class="fa-solid fa-notes-medical"></i>
+                            <span>CASEVAC & MEDICAL</span>
+                        </div>
+                        <p class="text-gray-400 leading-relaxed text-[11px]">
+                            Critical delivery of O-negative blood, freeze-dried plasma, anti-venoms, and rapid automated casualty extraction pods during the "Golden Hour".
+                        </p>
+                    </div>
+
+                    <div class="p-3.5 bg-tactical-800/60 rounded border border-tactical-700/50 space-y-2">
+                        <div class="text-tactical-amber font-bold flex items-center space-x-2">
+                            <i class="fa-solid fa-gun"></i>
+                            <span>AMMO & SPECIAL STORES</span>
+                        </div>
+                        <p class="text-gray-400 leading-relaxed text-[11px]">
+                            Immediate replenishment of 5.56mm/7.62mm small arms ammo, ATGM batteries, radio thermal packs, and night vision replacement batteries to frontline peaks.
+                        </p>
+                    </div>
+
+                    <div class="p-3.5 bg-tactical-800/60 rounded border border-tactical-700/50 space-y-2">
+                        <div class="text-tactical-emerald font-bold flex items-center space-x-2">
+                            <i class="fa-solid fa-utensils"></i>
+                            <span>COLD-ZONE RATIONS & WATER</span>
+                        </div>
+                        <p class="text-gray-400 leading-relaxed text-[11px]">
+                            Heated hydration packs, specialized high-calorie survival rations, and kerosene heater fuel canisters to cut dependence on avalanche-prone foot patrols.
+                        </p>
+                    </div>
+
+                    <div class="p-3.5 bg-tactical-800/60 rounded border border-tactical-700/50 space-y-2">
+                        <div class="text-tactical-accent font-bold flex items-center space-x-2">
+                            <i class="fa-solid fa-life-ring"></i>
+                            <span>HADR & DISASTER RELIEF</span>
+                        </div>
+                        <p class="text-gray-400 leading-relaxed text-[11px]">
+                            Rapid aerial bridge for flood, earthquake, and landslide cut-off civilian communities, providing water purification units, satellite transmitters, and baby food.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: INTERACTIVE MISSION SIMULATOR ==================== -->
+        <section id="tab-mission" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 font-mono">
+                <!-- Mission Parameters Configuration (1 Col) -->
+                <div class="hud-border bg-tactical-900/90 rounded-lg p-5 space-y-5">
+                    <div class="border-b border-tactical-700/60 pb-3 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-sliders text-tactical-accent"></i>
+                            <h2 class="text-sm font-bold text-white uppercase">SORTIE PARAMETERS</h2>
+                        </div>
+                        <span class="text-[10px] text-tactical-accent bg-tactical-accent/10 px-2 py-0.5 rounded border border-tactical-accent/30">SIM-ENGINE</span>
+                    </div>
+
+                    <!-- Platform Selector -->
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">SELECT DRONE PLATFORM:</label>
+                        <select id="sim-platform-select" onchange="updateSimPlatform()" class="w-full bg-tactical-800 border border-tactical-600 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-tactical-accent font-mono">
+                            <option value="GARUDA-HL 100">GARUDA-HL 100 (Hybrid Heavy-Lift VTOL)</option>
+                            <option value="TRISHUL-50 HEXA">TRISHUL-50 HEXA (Siachen Certified Hexa)</option>
+                            <option value="PUSHPAK-SWARM">PUSHPAK-SWARM (Coordinated Swarm System)</option>
+                        </select>
+                    </div>
+
+                    <!-- Sliders for Mission Config -->
+                    <div class="space-y-4 text-xs">
+                        <!-- Payload Slider -->
+                        <div>
+                            <div class="flex justify-between text-gray-300 mb-1">
+                                <span>Payload Weight:</span>
+                                <span class="text-tactical-accent font-bold" id="sim-payload-val">45 kg</span>
+                            </div>
+                            <input type="range" id="sim-payload-slider" min="5" max="100" value="45" oninput="calculateMissionPhysics()" class="w-full h-1.5 bg-tactical-700 rounded-lg appearance-none cursor-pointer accent-tactical-accent">
+                            <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                                <span>5 kg (Medical/Blood)</span>
+                                <span>100 kg (Max Ammo/Stores)</span>
+                            </div>
+                        </div>
+
+                        <!-- Distance Slider -->
+                        <div>
+                            <div class="flex justify-between text-gray-300 mb-1">
+                                <span>Mission Distance (One-Way):</span>
+                                <span class="text-tactical-amber font-bold" id="sim-dist-val">38 km</span>
+                            </div>
+                            <input type="range" id="sim-dist-slider" min="5" max="120" value="38" oninput="calculateMissionPhysics()" class="w-full h-1.5 bg-tactical-700 rounded-lg appearance-none cursor-pointer accent-tactical-amber">
+                            <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                                <span>5 km (Local Ridge)</span>
+                                <span>120 km (Deep Forward Base)</span>
+                            </div>
+                        </div>
+
+                        <!-- Target Elevation Slider -->
+                        <div>
+                            <div class="flex justify-between text-gray-300 mb-1">
+                                <span>Target Ridge Elevation:</span>
+                                <span class="text-tactical-emerald font-bold" id="sim-elev-val">15,500 ft</span>
+                            </div>
+                            <input type="range" id="sim-elev-slider" min="1000" max="20000" step="500" value="15500" oninput="calculateMissionPhysics()" class="w-full h-1.5 bg-tactical-700 rounded-lg appearance-none cursor-pointer accent-tactical-emerald">
+                            <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                                <span>1,000 ft (Plains)</span>
+                                <span>20,000 ft (High Glaciers)</span>
+                            </div>
+                        </div>
+
+                        <!-- Adverse Weather Modifier -->
+                        <div>
+                            <label class="block text-gray-400 mb-1.5">WEATHER & EW CONDITION:</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="setWeather('clear')" id="w-clear" class="weather-btn px-2.5 py-1.5 rounded bg-tactical-accent/20 text-tactical-accent border border-tactical-accent/40 font-bold text-[11px]">Clear / Low Wind</button>
+                                <button onclick="setWeather('gale')" id="w-gale" class="weather-btn px-2.5 py-1.5 rounded bg-tactical-800 text-gray-400 border border-tactical-700/50 text-[11px]">35kt Blizzard</button>
+                                <button onclick="setWeather('jamming')" id="w-jam" class="weather-btn px-2.5 py-1.5 rounded bg-tactical-800 text-gray-400 border border-tactical-700/50 text-[11px]">GPS-Denied/EW</button>
+                                <button onclick="setWeather('night')" id="w-night" class="weather-btn px-2.5 py-1.5 rounded bg-tactical-800 text-gray-400 border border-tactical-700/50 text-[11px]">Night / Zero-Vis</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calculated Mission Readiness Indicator -->
+                    <div class="p-3 rounded bg-tactical-800/80 border border-tactical-600/50 space-y-2 text-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">FLIGHT VIABILITY:</span>
+                            <span class="text-tactical-emerald font-bold" id="sim-viability-badge"><i class="fa-solid fa-circle-check mr-1"></i> OPTIMAL (96%)</span>
+                        </div>
+                        <div class="flex justify-between text-gray-300 text-[11px]">
+                            <span>Estimated Flight Duration:</span>
+                            <span class="font-bold text-white" id="sim-time-est">26.2 mins</span>
+                        </div>
+                        <div class="flex justify-between text-gray-300 text-[11px]">
+                            <span>Reserve Battery on RTB:</span>
+                            <span class="font-bold text-tactical-accent" id="sim-reserve-est">34% (Safe Margin)</span>
+                        </div>
+                    </div>
+
+                    <button onclick="startMissionAnimation()" id="sim-launch-btn" class="w-full py-2.5 rounded bg-tactical-accent hover:bg-tactical-accent/90 text-tactical-900 font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(0,240,255,0.4)]">
+                        <i class="fa-solid fa-play"></i>
+                        <span>EXECUTE SIMULATED SORTIE</span>
+                    </button>
+                </div>
+
+                <!-- Simulation Visualizer & Real-time Altitude Profile (2 Cols) -->
+                <div class="lg:col-span-2 hud-border bg-tactical-900/90 rounded-lg p-5 flex flex-col justify-between space-y-4">
+                    <div class="flex items-center justify-between border-b border-tactical-700/60 pb-3">
+                        <div class="flex items-center space-x-2 font-mono">
+                            <i class="fa-solid fa-mountain-sun text-tactical-accent"></i>
+                            <h2 class="text-sm font-bold text-white uppercase">MISSION FLIGHT PROFILE & DROP CORRIDOR</h2>
+                        </div>
+                        <span class="text-xs font-mono text-gray-400" id="sim-status-label">STATUS: STANDBY AT BASE CAMP</span>
+                    </div>
+
+                    <!-- Canvas Flight Profile Simulation -->
+                    <div class="relative w-full h-[320px] rounded bg-tactical-900 border border-tactical-700/60 overflow-hidden">
+                        <canvas id="missionSimCanvas" class="w-full h-full block"></canvas>
+                        
+                        <!-- Overlay Flight Diagnostics -->
+                        <div class="absolute top-2 left-2 bg-tactical-900/80 border border-tactical-700/60 px-2.5 py-1.5 rounded font-mono text-[10px] text-gray-300 space-y-0.5">
+                            <div>TERRAIN ELEVATION PROFILE: <span class="text-tactical-amber">Z-AXIS 1,000m &rarr; 5,600m</span></div>
+                            <div>AIR DENSITY FACTOR: <span class="text-tactical-accent" id="sim-density-factor">0.68 kg/mÂ³</span></div>
+                        </div>
+
+                        <div class="absolute bottom-2 right-2 font-mono text-[10px] text-gray-400 bg-tactical-900/80 px-2 py-1 rounded border border-tactical-700/50">
+                            NavIC Anti-Spoofing: <span class="text-tactical-emerald">ACTIVE</span>
+                        </div>
+                    </div>
+
+                    <!-- Step-by-Step Flight Telemetry Log -->
+                    <div class="p-3 bg-tactical-800/80 rounded border border-tactical-700/50 font-mono text-xs space-y-1.5 max-h-36 overflow-y-auto" id="mission-log-box">
+                        <div class="text-tactical-accent font-bold border-b border-tactical-700/40 pb-1 flex justify-between">
+                            <span>[C2 LOG] AUTONOMOUS MISSION FLIGHT CONTROLLER</span>
+                            <span>FREQ: 5.8 GHz FHSS</span>
+                        </div>
+                        <div class="text-gray-300 text-[11px]"><span class="text-gray-500">[T-00:00]</span> Pre-flight checks passed: 6/6 Brushless ESCs calibrated, NavIC lock 12 sats.</div>
+                        <div class="text-gray-300 text-[11px]"><span class="text-gray-500">[T-00:05]</span> Payload secure: Quick-release winch hooked at center of gravity.</div>
+                        <div class="text-tactical-emerald text-[11px]"><span class="text-gray-500">[T-00:10]</span> Ready for mission execution. Press "EXECUTE SIMULATED SORTIE" to launch.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: LOGISTICS MATRIX & COST-BENEFIT ANALYTICS ==================== -->
+        <section id="tab-analytics" class="tab-content hidden space-y-6">
+            <div class="border-b border-tactical-700/60 pb-3 flex flex-wrap items-center justify-between gap-2 font-mono">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-pie text-tactical-accent"></i>
+                        <span>OPERATIONAL EFFICIENCY & STRATEGIC COMPARISON</span>
+                    </h2>
+                    <p class="text-xs text-gray-400">Quantitative comparison: Indigenous Logistics Drones vs Military Helicopters vs Road Convoys vs Animal Transport Corps (Mules).</p>
+                </div>
+                <div class="px-3 py-1 rounded bg-tactical-emerald/10 border border-tactical-emerald/30 text-tactical-emerald text-xs font-bold">
+                    <i class="fa-solid fa-leaf mr-1"></i> 90% CARBON REDUCTION
+                </div>
+            </div>
+
+            <!-- Comparison Metric Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 font-mono text-xs">
+                <div class="hud-border bg-tactical-900/90 p-4 rounded-lg">
+                    <div class="text-gray-400 uppercase text-[11px]">Cost Per Kg-Km Delivered</div>
+                    <div class="text-xl font-bold text-tactical-emerald mt-1">$0.18 <span class="text-xs text-gray-400 font-normal">/ kg-km</span></div>
+                    <p class="text-[10px] text-gray-400 mt-2">v/s Helicopter ($4.20/kg-km) &mdash; <strong class="text-tactical-emerald">95.7% Savings</strong></p>
+                </div>
+
+                <div class="hud-border bg-tactical-900/90 p-4 rounded-lg">
+                    <div class="text-gray-400 uppercase text-[11px]">Forward Post Delivery Time</div>
+                    <div class="text-xl font-bold text-tactical-accent mt-1">28 Minutes</div>
+                    <p class="text-[10px] text-gray-400 mt-2">v/s Mule Train (18 Hours) across snow ridges</p>
+                </div>
+
+                <div class="hud-border bg-tactical-900/90 p-4 rounded-lg">
+                    <div class="text-gray-400 uppercase text-[11px]">Human Casualty Risk</div>
+                    <div class="text-xl font-bold text-tactical-emerald mt-1">ZERO (0%)</div>
+                    <p class="text-[10px] text-gray-400 mt-2">Eliminates convoy ambushes & high-altitude avalanche exposure</p>
+                </div>
+
+                <div class="hud-border bg-tactical-900/90 p-4 rounded-lg">
+                    <div class="text-gray-400 uppercase text-[11px]">Weather Window Flexibility</div>
+                    <div class="text-xl font-bold text-tactical-amber mt-1">24/7 Night/Fog</div>
+                    <p class="text-[10px] text-gray-400 mt-2">Unrestricted by pilot visual flight rules (VFR) limitations</p>
+                </div>
+            </div>
+
+            <!-- Interactive Comparison Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Chart 1: Cost & Delivery Time Bar Chart -->
+                <div class="hud-border bg-tactical-900/90 rounded-lg p-5 space-y-4">
+                    <div class="flex items-center justify-between border-b border-tactical-700/60 pb-3 font-mono">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-column text-tactical-accent"></i>
+                            <h3 class="text-sm font-bold text-white uppercase">COST PER TON-KM & TURNAROUND (HOURS)</h3>
+                        </div>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="costComparisonChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Fleet Mission Readiness Radar Chart -->
+                <div class="hud-border bg-tactical-900/90 rounded-lg p-5 space-y-4">
+                    <div class="flex items-center justify-between border-b border-tactical-700/60 pb-3 font-mono">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-radar text-tactical-amber"></i>
+                            <h3 class="text-sm font-bold text-white uppercase">MULTI-ATTRIBUTE OPERATIONAL READINESS</h3>
+                        </div>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="readinessRadarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deep-Dive Comparison Table -->
+            <div class="hud-border bg-tactical-900/90 rounded-lg p-5 font-mono overflow-x-auto">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-table-list text-tactical-accent"></i>
+                    <span>STRATEGIC MODAL COMPARISON MATRIX</span>
+                </h3>
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="border-b border-tactical-700/70 text-gray-400 bg-tactical-800/60">
+                            <th class="py-2.5 px-3">LOGISTICS MODALITY</th>
+                            <th class="py-2.5 px-3">PAYLOAD CAPACITY</th>
+                            <th class="py-2.5 px-3">AVG RESPONSE TIME</th>
+                            <th class="py-2.5 px-3">COST PER SORTIE</th>
+                            <th class="py-2.5 px-3">TERRAIN SENSITIVITY</th>
+                            <th class="py-2.5 px-3">PILOT/CREW EXPOSURE</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-tactical-700/40 text-gray-300">
+                        <tr class="bg-tactical-accent/5 hover:bg-tactical-accent/10 transition-colors">
+                            <td class="py-3 px-3 font-bold text-tactical-accent flex items-center space-x-2">
+                                <i class="fa-solid fa-crosshairs"></i>
+                                <span>Indigenous Drone (GARUDA-HL)</span>
+                            </td>
+                            <td class="py-3 px-3 text-white font-bold">100 kg (Modular)</td>
+                            <td class="py-3 px-3 text-tactical-emerald font-bold">25 - 40 Mins</td>
+                            <td class="py-3 px-3 text-tactical-emerald font-bold">~$45 USD</td>
+                            <td class="py-3 px-3 text-tactical-emerald">Zero (Direct Flight)</td>
+                            <td class="py-3 px-3 text-tactical-emerald font-bold">0% (Autonomous)</td>
+                        </tr>
+                        <tr class="hover:bg-tactical-800/40">
+                            <td class="py-3 px-3 font-bold text-white flex items-center space-x-2">
+                                <i class="fa-solid fa-helicopter text-gray-400"></i>
+                                <span>Military Helicopter (e.g. Cheetah/Mi-17)</span>
+                            </td>
+                            <td class="py-3 px-3">500 - 3,000 kg</td>
+                            <td class="py-3 px-3">2 - 4 Hours (Prep time)</td>
+                            <td class="py-3 px-3 text-tactical-crimson font-bold">~$3,800 USD</td>
+                            <td class="py-3 px-3 text-tactical-amber">Helipad Required</td>
+                            <td class="py-3 px-3 text-tactical-crimson">High (2-4 Pilots)</td>
+                        </tr>
+                        <tr class="hover:bg-tactical-800/40">
+                            <td class="py-3 px-3 font-bold text-white flex items-center space-x-2">
+                                <i class="fa-solid fa-truck text-gray-400"></i>
+                                <span>Heavy Tactical Truck Convoy</span>
+                            </td>
+                            <td class="py-3 px-3">5,000 kg</td>
+                            <td class="py-3 px-3">18 - 36 Hours</td>
+                            <td class="py-3 px-3">~$620 USD</td>
+                            <td class="py-3 px-3 text-tactical-crimson">Severe (Landslides)</td>
+                            <td class="py-3 px-3 text-tactical-amber">Moderate (Drivers/Escort)</td>
+                        </tr>
+                        <tr class="hover:bg-tactical-800/40">
+                            <td class="py-3 px-3 font-bold text-white flex items-center space-x-2">
+                                <i class="fa-solid fa-horse text-gray-400"></i>
+                                <span>Animal Transport / Mule Corps</span>
+                            </td>
+                            <td class="py-3 px-3">40 - 60 kg per mule</td>
+                            <td class="py-3 px-3">14 - 28 Hours</td>
+                            <td class="py-3 px-3">~$180 USD</td>
+                            <td class="py-3 px-3 text-tactical-crimson">Severe (Snow/Ice)</td>
+                            <td class="py-3 px-3 text-tactical-crimson">High (Handlers)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 5: INDIGENOUS SUBSYSTEMS & TECHNOLOGY BLUEPRINT ==================== -->
+        <section id="tab-tech" class="tab-content hidden space-y-6">
+            <div class="border-b border-tactical-700/60 pb-3 flex flex-wrap items-center justify-between gap-2 font-mono">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-microchip text-tactical-accent"></i>
+                        <span>SOVEREIGN CRITICAL SUBSYSTEMS & INDIGENIZATION</span>
+                    </h2>
+                    <p class="text-xs text-gray-400">Detailed breakdown of indigenous sub-components ensuring 100% supply chain sovereignty and cyber-resilience.</p>
+                </div>
+                <div class="px-3 py-1 rounded bg-tactical-accent/10 border border-tactical-accent/30 text-tactical-accent text-xs font-bold">
+                    <i class="fa-solid fa-shield-halved mr-1"></i> SELF-RELIANT DEFENSE TECH
+                </div>
+            </div>
+
+            <!-- Interactive Subsystem Hotspot Architecture -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 font-mono">
+                <!-- Interactive Subsystem Selector (1 Col) -->
+                <div class="hud-border bg-tactical-900/90 rounded-lg p-5 space-y-2">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">SELECT CRITICAL SUBSYSTEM</h3>
+                    
+                    <button onclick="inspectSubsystem('navic')" id="sub-btn-navic" class="subsystem-btn w-full text-left p-3 rounded bg-tactical-accent/20 border border-tactical-accent text-white transition-all flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded bg-tactical-800 flex items-center justify-center text-tactical-accent"><i class="fa-solid fa-satellite"></i></div>
+                        <div>
+                            <div class="text-xs font-bold">NavIC + Optical Navigation</div>
+                            <div class="text-[10px] text-gray-400">GPS-Denied Resilient VIO Engine</div>
+                        </div>
+                    </button>
+
+                    <button onclick="inspectSubsystem('propulsion')" id="sub-btn-propulsion" class="subsystem-btn w-full text-left p-3 rounded bg-tactical-800/80 hover:bg-tactical-800 text-gray-300 border border-tactical-700/50 transition-all flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded bg-tactical-800 flex items-center justify-center text-tactical-amber"><i class="fa-solid fa-fire-flame-curved"></i></div>
+                        <div>
+                            <div class="text-xs font-bold">Hybrid Micro-Turbine Propulsion</div>
+                            <div class="text-[10px] text-gray-400">Sub-Zero High-Altitude Generator</div>
+                        </div>
+                    </button>
+
+                    <button onclick="inspectSubsystem('airframe')" id="sub-btn-airframe" class="subsystem-btn w-full text-left p-3 rounded bg-tactical-800/80 hover:bg-tactical-800 text-gray-300 border border-tactical-700/50 transition-all flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded bg-tactical-800 flex items-center justify-center text-tactical-emerald"><i class="fa-solid fa-shield"></i></div>
+                        <div>
+                            <div class="text-xs font-bold">Carbon-Kevlar Aerostructure</div>
+                            <div class="text-[10px] text-gray-400">Integrated Anti-Icing Thermal Cores</div>
+                        </div>
+                    </button>
+
+                    <button onclick="inspectSubsystem('payload')" id="sub-btn-payload" class="subsystem-btn w-full text-left p-3 rounded bg-tactical-800/80 hover:bg-tactical-800 text-gray-300 border border-tactical-700/50 transition-all flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded bg-tactical-800 flex items-center justify-center text-tactical-accent"><i class="fa-solid fa-box-archive"></i></div>
+                        <div>
+                            <div class="text-xs font-bold">Autonomous Smart Cargo Bay</div>
+                            <div class="text-[10px] text-gray-400">Laser-Guided Winch & Auto-Eject</div>
+                        </div>
+                    </button>
+
+                    <button onclick="inspectSubsystem('cyber')" id="sub-btn-cyber" class="subsystem-btn w-full text-left p-3 rounded bg-tactical-800/80 hover:bg-tactical-800 text-gray-300 border border-tactical-700/50 transition-all flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded bg-tactical-800 flex items-center justify-center text-tactical-crimson"><i class="fa-solid fa-lock"></i></div>
+                        <div>
+                            <div class="text-xs font-bold">Anti-Jam Secure C2 Datalink</div>
+                            <div class="text-[10px] text-gray-400">Sovereign Quantum-Resistant Encryption</div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Subsystem Detailed Inspection Card (2 Cols) -->
+                <div class="lg:col-span-2 hud-border bg-tactical-900/90 rounded-lg p-5 flex flex-col justify-between font-mono space-y-4" id="subsystem-detail-panel">
+                    <!-- Dynamic Content Injected by JS -->
+                    <div>
+                        <div class="flex items-center justify-between border-b border-tactical-700/60 pb-3">
+                            <div>
+                                <span class="text-[10px] text-tactical-accent font-bold uppercase">INDIGENOUS SUBSYSTEM DOSSIER</span>
+                                <h3 class="text-base font-bold text-white mt-0.5" id="sub-title">NavIC + Optical Inertial Odometry (VIO)</h3>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-tactical-emerald/20 text-tactical-emerald text-xs font-bold border border-tactical-emerald/40" id="sub-status">
+                                100% INDIGENOUS (DRDO / ISRO)
+                            </span>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                            <div class="bg-tactical-800/70 p-3 rounded border border-tactical-700/40">
+                                <span class="text-gray-400 text-[10px] block">POSITIONAL ACCURACY</span>
+                                <strong class="text-tactical-accent text-sm" id="sub-metric1">&lt; 0.50 Meters</strong>
+                            </div>
+                            <div class="bg-tactical-800/70 p-3 rounded border border-tactical-700/40">
+                                <span class="text-gray-400 text-[10px] block">GPS-DENIED RETENTION</span>
+                                <strong class="text-tactical-emerald text-sm" id="sub-metric2">100% Autonomous</strong>
+                            </div>
+                            <div class="bg-tactical-800/70 p-3 rounded border border-tactical-700/40">
+                                <span class="text-gray-400 text-[10px] block">FREQUENCY SPECTRUM</span>
+                                <strong class="text-tactical-amber text-sm" id="sub-metric3">NavIC L5 / S-Band</strong>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 space-y-3 text-xs text-gray-300 leading-relaxed" id="sub-description">
+                            <p>
+                                The navigation architecture combines sovereign NavIC dual-frequency receivers with down-looking stereo optical flow cameras and solid-state LiDAR terrain matching. In the event of aggressive adversary GPS spoofing or electronic warfare jamming, the flight computer shifts to optical landmark recognition, matching terrain topology to pre-loaded high-resolution DEM (Digital Elevation Models).
+                            </p>
+                            <p>
+                                Eliminates foreign satellite dependency and delivers pin-point payload delivery accuracy directly onto a 2-meter mountain helipad in zero-visibility conditions.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Supply Chain Sovereignty Bar -->
+                    <div class="pt-4 border-t border-tactical-700/60">
+                        <div class="flex justify-between text-xs mb-1.5">
+                            <span class="text-gray-400">Domestic Supply Chain Content:</span>
+                            <span class="text-tactical-emerald font-bold" id="sub-domestic-pct">94.8% Indigenized</span>
+                        </div>
+                        <div class="w-full bg-tactical-700 h-2 rounded-full overflow-hidden">
+                            <div id="sub-progress-bar" class="bg-gradient-to-r from-tactical-accent to-tactical-emerald h-full w-[94.8%] transition-all duration-500"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Operational Flight Order (OPORD) / Briefing Document -->
+    <div id="opord-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="hud-border bg-tactical-900 w-full max-w-3xl rounded-lg p-6 font-mono space-y-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start border-b border-tactical-700/60 pb-3">
+                <div>
+                    <span class="text-[10px] text-tactical-accent font-bold">DEFENSE LOGISTICS COMMAND & CONTROL</span>
+                    <h3 class="text-lg font-bold text-white">TACTICAL FLIGHT ORDER (OPORD-LOG-8842)</h3>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- OPORD Content -->
+            <div class="text-xs space-y-4 text-gray-300" id="opord-print-area">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-tactical-800/80 p-3 rounded border border-tactical-700/40 text-[11px]">
+                    <div><span class="text-gray-500">OPERATION:</span> <strong class="text-white block">OPERATION HIM-SUPPLY</strong></div>
+                    <div><span class="text-gray-500">SECTOR:</span> <strong class="text-white block">NORTHERN CORRIDOR</strong></div>
+                    <div><span class="text-gray-500">SORTIE ID:</span> <strong class="text-tactical-accent block" id="opord-sortie-id">IND-UAV-408</strong></div>
+                    <div><span class="text-gray-500">AUTHORIZATION:</span> <strong class="text-tactical-emerald block">APPROVED (C2)</strong></div>
+                </div>
+
+                <div class="space-y-1">
+                    <h4 class="font-bold text-white uppercase text-xs">1. SITUATION & MISSION OBJECTIVE:</h4>
+                    <p class="text-gray-400 leading-relaxed text-[11px]">
+                        Forward Operating Base (FOB-VALKYRIE) at 16,800 ft altitude requires immediate cold-chain plasma, high-discharge radio packs, and 7.62mm precision sniper ammunition replenishment following severe avalanche damage to the mountain transit route.
+                    </p>
+                </div>
+
+                <div class="space-y-1">
+                    <h4 class="font-bold text-white uppercase text-xs">2. FLIGHT PLAN & CORRIDOR COORDINATES:</h4>
+                    <div class="bg-tactical-800/60 p-2.5 rounded font-mono text-[10px] text-tactical-accent space-y-0.5">
+                        <div>&bull; WAYPOINT ALPHA (DEP): MLB-TRISHUL [34Â°18'22"N, 77Â°34'11"E] - Elev: 11,200 ft</div>
+                        <div>&bull; WAYPOINT BRAVO (TRANSIT): PASS-15.2K [34Â°22'45"N, 77Â°39'04"E] - Safe Ceiling: 17,000 ft</div>
+                        <div>&bull; WAYPOINT CHARLIE (DROP): FOB-VALKYRIE [34Â°28'10"N, 77Â°44'50"E] - Elev: 16,800 ft</div>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <h4 class="font-bold text-white uppercase text-xs">3. PAYLOAD & DELIVERY PROCEDURE:</h4>
+                    <p class="text-gray-400 leading-relaxed text-[11px]">
+                        Zero-touch precision winch cable drop from 30m hover height to eliminate ground rotor dust signature and prevent aircraft damage from loose glacier scree.
+                    </p>
+                </div>
+
+                <div class="space-y-1">
+                    <h4 class="font-bold text-white uppercase text-xs">4. CONTINGENCY / EW PROTOCOL:</h4>
+                    <p class="text-gray-400 leading-relaxed text-[11px]">
+                        In case of severe RF spoofing, flight controller shifts to optical landmark terrain odometry with pre-programmed autonomous Return-To-Base (RTB) fail-safe.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="pt-4 border-t border-tactical-700/60 flex justify-end space-x-3">
+                <button onclick="window.print()" class="px-4 py-2 rounded bg-tactical-800 hover:bg-tactical-700 text-white text-xs font-bold flex items-center space-x-1.5">
+                    <i class="fa-solid fa-print"></i>
+                    <span>Print Document</span>
+                </button>
+                <button onclick="closeModal()" class="px-4 py-2 rounded bg-tactical-accent hover:bg-tactical-accent/90 text-tactical-900 text-xs font-bold">
+                    Close Briefing
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-tactical-900 border-t border-tactical-700/50 py-4 font-mono text-xs text-gray-500 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-shield-halved text-tactical-accent"></i>
+                <span class="text-gray-400 font-bold">INDILOG-UAV STRATEGIC LOGISTICS ECOSYSTEM</span>
+            </div>
+            <div>Self-Reliant Defense Logistics &bull; High-Altitude Unmanned Capability</div>
+        </div>
+    </footer>
+
+    <!-- ==================== JAVASCRIPT ENGINE ==================== -->
+    <script>
+        /* ================= Audio Feedback Synthesizer (Web Audio API) ================= */
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playBeep(freq = 880, type = 'sine', duration = 0.08) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {
+                // AudioContext autoplay restrictions
+            }
+        }
+
+        function toggleAudio() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high text-xs';
+                playBeep(1200, 'sine', 0.1);
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-xs text-gray-500';
+            }
+        }
+
+        /* ================= Tab Switching Logic ================= */
+        function switchTab(tabId) {
+            playBeep(700, 'sine', 0.05);
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            // Show target tab
+            const target = document.getElementById('tab-' + tabId) || document.getElementById(tabId);
+            if (target) target.classList.remove('hidden');
+
+            // Update desktop nav buttons
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.className = 'nav-tab px-3.5 py-2 rounded transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-tactical-800';
+            });
+            const activeBtn = document.getElementById('tab-btn-' + tabId);
+            if (activeBtn) {
+                activeBtn.className = 'nav-tab px-3.5 py-2 rounded transition-all flex items-center space-x-2 bg-tactical-accent/15 text-tactical-accent border border-tactical-accent/40 font-semibold';
+            }
+
+            // Update mobile buttons
+            document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+                btn.className = 'mobile-tab-btn flex-shrink-0 px-3 py-1.5 rounded text-gray-400 hover:text-white';
+            });
+
+            // Initialize charts if switching to analytics
+            if (tabId === 'analytics') {
+                setTimeout(initCharts, 50);
+            }
+        }
+
+        /* ================= Tactical Radar & Map Canvas Renderer ================= */
+        const mapCanvas = document.getElementById('tacticalMapCanvas');
+        const mapCtx = mapCanvas.getContext('2d');
+
+        // Resize Canvas
+        function resizeCanvas() {
+            mapCanvas.width = mapCanvas.parentElement.clientWidth;
+            mapCanvas.height = mapCanvas.parentElement.clientHeight;
+            
+            const missionCanvas = document.getElementById('missionSimCanvas');
+            if (missionCanvas) {
+                missionCanvas.width = missionCanvas.parentElement.clientWidth;
+                missionCanvas.height = missionCanvas.parentElement.clientHeight;
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 100);
+
+        // Simulation Entities for Tactical Map
+        let mapDrones = [
+            { id: 'GARUDA-04', type: 'Hybrid Heavy VTOL', x: 0.2, y: 0.35, targetX: 0.75, targetY: 0.65, speed: 0.0008, alt: 14820, payload: 'Emergency Plasma', status: 'Airborne' },
+            { id: 'TRISHUL-09', type: 'High-Altitude Hexa', x: 0.6, y: 0.2, targetX: 0.3, targetY: 0.7, speed: 0.0006, alt: 17400, payload: '7.62mm Ammo', status: 'Drop Approach' },
+            { id: 'PUSHPAK-SW1', type: 'Swarm Cell A', x: 0.8, y: 0.4, targetX: 0.15, targetY: 0.25, speed: 0.001, alt: 12100, payload: 'Radio Battery Packs', status: 'Returning' }
+        ];
+
+        let waypoints = [
+            { name: 'BASE CAMP ALPHA (MLB)', x: 0.15, y: 0.3, type: 'base' },
+            { name: 'TRANSIT RIDGE PASS (15.2K)', x: 0.48, y: 0.45, type: 'pass' },
+            { name: 'FOB VALKYRIE (16.8K)', x: 0.78, y: 0.7, type: 'outpost' },
+            { name: 'GLACIER SECTOR ECHO', x: 0.35, y: 0.8, type: 'glacier' }
+        ];
+
+        let mapMode = 'tactical';
+        function toggleMapMode(mode) {
+            mapMode = mode;
+            document.getElementById('btn-map-tac').className = (mode === 'tactical') 
+                ? 'px-2 py-1 rounded bg-tactical-accent/20 text-tactical-accent border border-tactical-accent/40 font-bold'
+                : 'px-2 py-1 rounded bg-tactical-800 text-gray-400 hover:text-white';
+            document.getElementById('btn-map-elev').className = (mode === 'elevation') 
+                ? 'px-2 py-1 rounded bg-tactical-amber/20 text-tactical-amber border border-tactical-amber/40 font-bold'
+                : 'px-2 py-1 rounded bg-tactical-800 text-gray-400 hover:text-white';
+            playBeep(900, 'sine', 0.05);
+        }
+
+        function triggerSpawnDrone() {
+            playBeep(1100, 'sine', 0.1);
+            const newId = 'GARUDA-0' + (mapDrones.length + 5);
+            mapDrones.push({
+                id: newId,
+                type: 'Hybrid Heavy VTOL',
+                x: 0.15,
+                y: 0.3,
+                targetX: 0.78,
+                targetY: 0.7,
+                speed: 0.0009,
+                alt: 13500,
+                payload: 'Mortar Ammo Resupply',
+                status: 'Climbing'
+            });
+            document.getElementById('active-sorties-counter').innerText = mapDrones.length + 11;
+        }
+
+        let mapAnimationTime = 0;
+
+        function renderTacticalMap() {
+            if (!mapCanvas.width || !mapCanvas.height) return;
+            const w = mapCanvas.width;
+            const h = mapCanvas.height;
+
+            mapAnimationTime += 0.02;
+
+            // Background
+            mapCtx.fillStyle = '#070f13';
+            mapCtx.fillRect(0, 0, w, h);
+
+            // Draw Terrain Contours (Elevation vs Tactical)
+            if (mapMode === 'elevation') {
+                for (let i = 0; i < 6; i++) {
+                    mapCtx.beginPath();
+                    mapCtx.ellipse(w * 0.55, h * 0.55, w * (0.4 - i * 0.06), h * (0.35 - i * 0.05), 0.2, 0, Math.PI * 2);
+                    mapCtx.strokeStyle = `rgba(255, 183, 3, ${0.1 + i * 0.07})`;
+                    mapCtx.lineWidth = 1.2;
+                    mapCtx.setLineDash([4, 4]);
+                    mapCtx.stroke();
+                    mapCtx.setLineDash([]);
+                }
+            } else {
+                // Grid Lines
+                mapCtx.strokeStyle = 'rgba(0, 240, 255, 0.06)';
+                mapCtx.lineWidth = 1;
+                const gridSize = 40;
+                for (let x = 0; x < w; x += gridSize) {
+                    mapCtx.beginPath(); mapCtx.moveTo(x, 0); mapCtx.lineTo(x, h); mapCtx.stroke();
+                }
+                for (let y = 0; y < h; y += gridSize) {
+                    mapCtx.beginPath(); mapCtx.moveTo(0, y); mapCtx.lineTo(w, y); mapCtx.stroke();
+                }
+            }
+
+            // Draw Flight Corridors / Waypoint Connections
+            mapCtx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+            mapCtx.lineWidth = 1.5;
+            mapCtx.setLineDash([6, 6]);
+            mapCtx.beginPath();
+            mapCtx.moveTo(waypoints[0].x * w, waypoints[0].y * h);
+            mapCtx.lineTo(waypoints[1].x * w, waypoints[1].y * h);
+            mapCtx.lineTo(waypoints[2].x * w, waypoints[2].y * h);
+            mapCtx.stroke();
+            mapCtx.setLineDash([]);
+
+            // Draw Waypoints
+            waypoints.forEach((wp, idx) => {
+                const px = wp.x * w;
+                const py = wp.y * h;
+
+                mapCtx.beginPath();
+                mapCtx.arc(px, py, 6, 0, Math.PI * 2);
+                mapCtx.fillStyle = wp.type === 'base' ? '#00f59b' : (wp.type === 'outpost' ? '#ff3366' : '#ffb703');
+                mapCtx.fill();
+
+                mapCtx.strokeStyle = '#ffffff';
+                mapCtx.lineWidth = 1.5;
+                mapCtx.stroke();
+
+                // Name label
+                mapCtx.fillStyle = '#cbd5e1';
+                mapCtx.font = '10px "JetBrains Mono", monospace';
+                mapCtx.fillText(wp.name, px + 10, py + 3);
+            });
+
+            // Update and Render Drones
+            mapDrones.forEach((d, idx) => {
+                // Movement vector
+                const dx = (d.targetX - d.x);
+                const dy = (d.targetY - d.y);
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist > 0.02) {
+                    d.x += (dx / dist) * d.speed;
+                    d.y += (dy / dist) * d.speed;
+                } else {
+                    // Swap targets
+                    const tempX = d.targetX;
+                    const tempY = d.targetY;
+                    d.targetX = d.x === waypoints[0].x ? waypoints[2].x : waypoints[0].x;
+                    d.targetY = d.y === waypoints[0].y ? waypoints[2].y : waypoints[0].y;
+                }
+
+                const px = d.x * w;
+                const py = d.y * h;
+
+                // Pulsing ring
+                mapCtx.beginPath();
+                mapCtx.arc(px, py, 12 + Math.sin(mapAnimationTime * 3 + idx) * 3, 0, Math.PI * 2);
+                mapCtx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+                mapCtx.stroke();
+
+                // Drone Icon Symbol
+                mapCtx.beginPath();
+                mapCtx.arc(px, py, 4, 0, Math.PI * 2);
+                mapCtx.fillStyle = '#00f0ff';
+                mapCtx.fill();
+
+                // Callsign label
+                mapCtx.fillStyle = '#00f0ff';
+                mapCtx.font = 'bold 11px "JetBrains Mono", monospace';
+                mapCtx.fillText(d.id, px + 12, py - 4);
+
+                mapCtx.fillStyle = '#94a3b8';
+                mapCtx.font = '9px "JetBrains Mono", monospace';
+                mapCtx.fillText(`${d.alt} ft | ${d.payload}`, px + 12, py + 8);
+            });
+
+            requestAnimationFrame(renderTacticalMap);
+        }
+        requestAnimationFrame(renderTacticalMap);
+
+        // Click on map to select drone telemetry
+        mapCanvas.addEventListener('click', (e) => {
+            const rect = mapCanvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) / mapCanvas.width;
+            const clickY = (e.clientY - rect.top) / mapCanvas.height;
+
+            mapDrones.forEach(d => {
+                const dist = Math.sqrt((d.x - clickX)**2 + (d.y - clickY)**2);
+                if (dist < 0.08) {
+                    playBeep(1200, 'sine', 0.08);
+                    document.getElementById('telemetry-callsign').innerText = d.id;
+                    document.getElementById('telemetry-type').innerText = d.type;
+                    document.getElementById('telemetry-cargo').innerText = d.payload;
+                    document.getElementById('telemetry-altitude').innerHTML = `${d.alt} <span class="text-xs font-normal text-gray-400">ft</span>`;
+                }
+            });
+        });
+
+        /* ================= Quick Tactical Actions ================= */
+        function executeAction(actionType) {
+            playBeep(950, 'square', 0.12);
+            const callsign = document.getElementById('telemetry-callsign').innerText;
+            const logBox = document.getElementById('mission-log-box');
+            let logMsg = '';
+
+            if (actionType === 'WINCH_DROP') {
+                logMsg = `<span class="text-tactical-accent font-bold">[ACTION]</span> ${callsign}: Precision winch descent initiated. Lowering payload from 25m hover height.`;
+                alert(`[C2 COMMAND SENT] Precision Winch Lowering Initiated for ${callsign}. Maintaining Zero-Landing Hover.`);
+            } else if (actionType === 'RTB') {
+                logMsg = `<span class="text-tactical-amber font-bold">[ACTION]</span> ${callsign}: Aborting current leg. Navigating to Base Camp Alpha on NavIC waypoint route.`;
+                alert(`[C2 COMMAND SENT] ${callsign} commanded Return-To-Base (RTB).`);
+            } else if (actionType === 'EMERGENCY_HOVER') {
+                logMsg = `<span class="text-tactical-crimson font-bold">[ALERT]</span> ${callsign}: GPS-denied failsafe engaged. Optical flow holding coordinates.`;
+                alert(`[FAILSAFE ACTIVATED] Optical flow station-keeping locked for ${callsign}.`);
+            }
+
+            if (logBox) {
+                const div = document.createElement('div');
+                div.className = 'text-xs text-gray-200 mt-1';
+                div.innerHTML = `<span class="text-gray-500">[NOW]</span> ` + logMsg;
+                logBox.prepend(div);
+            }
+        }
+
+        /* ================= Mission Simulator Engine ================= */
+        const missionSimCanvas = document.getElementById('missionSimCanvas');
+        const simCtx = missionSimCanvas ? missionSimCanvas.getContext('2d') : null;
+        let simProgress = 0;
+        let simRunning = false;
+        let simInterval = null;
+
+        function calculateMissionPhysics() {
+            const payload = parseInt(document.getElementById('sim-payload-slider').value);
+            const dist = parseInt(document.getElementById('sim-dist-slider').value);
+            const elev = parseInt(document.getElementById('sim-elev-slider').value);
+
+            document.getElementById('sim-payload-val').innerText = payload + ' kg';
+            document.getElementById('sim-dist-val').innerText = dist + ' km';
+            document.getElementById('sim-elev-val').innerText = elev.toLocaleString() + ' ft';
+
+            // Air density at altitude: rho = 1.225 * e^(-h / 8500)
+            const elevMeters = elev * 0.3048;
+            const density = (1.225 * Math.exp(-elevMeters / 8500)).toFixed(2);
+            const densityEl = document.getElementById('sim-density-factor');
+            if (densityEl) densityEl.innerText = density + ' kg/mÂ³';
+
+            // Estimated flight time in minutes (avg speed 90 km/h)
+            const speed = 90; // km/h
+            const timeMin = ((dist / speed) * 60).toFixed(1);
+            document.getElementById('sim-time-est').innerText = timeMin + ' mins';
+
+            // Battery reserve calculation
+            const batteryBurn = (dist * 0.45 + (payload / 100) * 20 + (elev / 20000) * 15);
+            const reserve = Math.max(10, Math.round(100 - batteryBurn));
+            document.getElementById('sim-reserve-est').innerText = reserve + '% (Safe Margin)';
+
+            // Viability check
+            const badge = document.getElementById('sim-viability-badge');
+            if (reserve > 25 && elev <= 18500) {
+                badge.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> OPTIMAL (${reserve}%)`;
+                badge.className = 'text-tactical-emerald font-bold';
+            } else if (reserve > 15) {
+                badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> MARGINAL (${reserve}%)`;
+                badge.className = 'text-tactical-amber font-bold';
+            } else {
+                badge.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1"></i> HIGH RISK (${reserve}%)`;
+                badge.className = 'text-tactical-crimson font-bold';
+            }
+        }
+
+        function setWeather(mode) {
+            playBeep(850, 'sine', 0.05);
+            document.querySelectorAll('.weather-btn').forEach(btn => {
+                btn.className = 'weather-btn px-2.5 py-1.5 rounded bg-tactical-800 text-gray-400 border border-tactical-700/50 text-[11px]';
+            });
+            const active = document.getElementById('w-' + mode) || document.getElementById('w-clear');
+            if (active) active.className = 'weather-btn px-2.5 py-1.5 rounded bg-tactical-accent/20 text-tactical-accent border border-tactical-accent/40 font-bold text-[11px]';
+            calculateMissionPhysics();
+        }
+
+        function updateSimPlatform() {
+            playBeep(900, 'sine', 0.05);
+            const sel = document.getElementById('sim-platform-select').value;
+            const slider = document.getElementById('sim-payload-slider');
+            if (sel.includes('100')) {
+                slider.max = 100;
+                slider.value = 60;
+            } else if (sel.includes('TRISHUL')) {
+                slider.max = 50;
+                slider.value = 35;
+            } else {
+                slider.max = 200;
+                slider.value = 120;
+            }
+            calculateMissionPhysics();
+        }
+
+        function selectDroneForSim(name, payload, range, elev) {
+            switchTab('mission');
+            const select = document.getElementById('sim-platform-select');
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value.includes(name.split(' ')[0])) {
+                    select.selectedIndex = i;
+                    break;
+                }
+            }
+            document.getElementById('sim-payload-slider').value = Math.min(payload, 50);
+            document.getElementById('sim-dist-slider').value = Math.min(range, 45);
+            document.getElementById('sim-elev-slider').value = elev;
+            calculateMissionPhysics();
+        }
+
+        function startMissionAnimation() {
+            if (simRunning) return;
+            simRunning = true;
+            simProgress = 0;
+            playBeep(1200, 'triangle', 0.2);
+
+            const launchBtn = document.getElementById('sim-launch-btn');
+            launchBtn.disabled = true;
+            launchBtn.classList.add('opacity-50');
+
+            const logBox = document.getElementById('mission-log-box');
+            const statusLabel = document.getElementById('sim-status-label');
+
+            const logStep = (msg, isAlert = false) => {
+                if (logBox) {
+                    const div = document.createElement('div');
+                    div.className = `text-[11px] ${isAlert ? 'text-tactical-emerald font-bold' : 'text-gray-300'}`;
+                    div.innerHTML = `<span class="text-gray-500">[SIM]</span> ` + msg;
+                    logBox.prepend(div);
+                }
+            };
+
+            logStep('VTOL Takeoff confirmed: Vertical climb to 15,000 ft transition altitude.');
+            statusLabel.innerText = 'STATUS: IN TRANSIT OVER MOUNTAIN PASS';
+
+            simInterval = setInterval(() => {
+                simProgress += 0.015;
+                renderMissionFlightProfile(simProgress);
+
+                if (simProgress >= 0.5 && simProgress < 0.52) {
+                    logStep('Transit Ridge crossed. NavIC signal solid. Anti-icing rotor heaters activated.');
+                }
+                if (simProgress >= 0.85 && simProgress < 0.87) {
+                    logStep('FOB-VALKYRIE in visual range. Precision winch descent lowered at 16,800 ft.');
+                    statusLabel.innerText = 'STATUS: HOVERING & DELIVERING PAYLOAD';
+                }
+
+                if (simProgress >= 1.0) {
+                    clearInterval(simInterval);
+                    simRunning = false;
+                    launchBtn.disabled = false;
+                    launchBtn.classList.remove('opacity-50');
+                    logStep('Payload successfully delivered with 0m landing footprint. RTB ready.', true);
+                    statusLabel.innerText = 'STATUS: SORTIE COMPLETED - 100% SUCCESS';
+                    playBeep(1500, 'sine', 0.25);
+                }
+            }, 50);
+        }
+
+        function renderMissionFlightProfile(progress = 0) {
+            if (!missionSimCanvas || !simCtx) return;
+            const w = missionSimCanvas.width;
+            const h = missionSimCanvas.height;
+
+            simCtx.fillStyle = '#070f13';
+            simCtx.fillRect(0, 0, w, h);
+
+            // Draw Mountain Terrain Curve
+            simCtx.beginPath();
+            simCtx.moveTo(0, h * 0.8);
+            simCtx.quadraticCurveTo(w * 0.25, h * 0.75, w * 0.5, h * 0.35); // Mountain Ridge Peak
+            simCtx.quadraticCurveTo(w * 0.75, h * 0.6, w, h * 0.45); // Target Ridge
+            simCtx.lineTo(w, h);
+            simCtx.lineTo(0, h);
+            simCtx.closePath();
+
+            const terrainGrad = simCtx.createLinearGradient(0, 0, 0, h);
+            terrainGrad.addColorStop(0, 'rgba(30, 56, 66, 0.8)');
+            terrainGrad.addColorStop(1, '#081217');
+            simCtx.fillStyle = terrainGrad;
+            simCtx.fill();
+
+            simCtx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+            simCtx.lineWidth = 2;
+            simCtx.stroke();
+
+            // Flight Trajectory Path
+            simCtx.beginPath();
+            simCtx.moveTo(w * 0.08, h * 0.75);
+            simCtx.lineTo(w * 0.2, h * 0.2); // Climb
+            simCtx.lineTo(w * 0.5, h * 0.18); // Pass Over Peak
+            simCtx.lineTo(w * 0.9, h * 0.35); // Drop point
+            simCtx.strokeStyle = 'rgba(255, 183, 3, 0.6)';
+            simCtx.setLineDash([4, 4]);
+            simCtx.stroke();
+            simCtx.setLineDash([]);
+
+            // Base & Target Markers
+            simCtx.fillStyle = '#00f59b';
+            simCtx.beginPath(); simCtx.arc(w * 0.08, h * 0.75, 5, 0, Math.PI * 2); simCtx.fill();
+            simCtx.fillText('BASE CAMP', w * 0.08 - 25, h * 0.75 + 18);
+
+            simCtx.fillStyle = '#ff3366';
+            simCtx.beginPath(); simCtx.arc(w * 0.9, h * 0.45, 5, 0, Math.PI * 2); simCtx.fill();
+            simCtx.fillText('FORWARD POST', w * 0.9 - 40, h * 0.45 + 18);
+
+            // Animated Drone Position
+            const t = Math.min(progress, 1.0);
+            let curX = w * 0.08 + t * (w * 0.9 - w * 0.08);
+            let curY = (h * 0.75) * (1-t) + (h * 0.35) * t - Math.sin(t * Math.PI) * (h * 0.55);
+
+            if (t > 0) {
+                // Glow
+                simCtx.beginPath();
+                simCtx.arc(curX, curY, 8, 0, Math.PI * 2);
+                simCtx.fillStyle = '#00f0ff';
+                simCtx.fill();
+
+                // Altitude line to terrain
+                simCtx.beginPath();
+                simCtx.moveTo(curX, curY);
+                simCtx.lineTo(curX, h * 0.6);
+                simCtx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+                simCtx.stroke();
+            }
+        }
+        setTimeout(() => renderMissionFlightProfile(0), 200);
+
+        /* ================= Chart.js Operational Visualizations ================= */
+        let costChartInstance = null;
+        let radarChartInstance = null;
+
+        function initCharts() {
+            const costCtx = document.getElementById('costComparisonChart');
+            if (costCtx && !costChartInstance) {
+                costChartInstance = new Chart(costCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Indigenous Drone', 'Tactical Helicopter', 'Truck Convoy', 'Mule Corps'],
+                        datasets: [
+                            {
+                                label: 'Cost Per Kg-Km ($)',
+                                data: [0.18, 4.20, 0.65, 1.40],
+                                backgroundColor: ['#00f0ff', '#ff3366', '#ffb703', '#94a3b8'],
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Delivery Time (Hours)',
+                                data: [0.45, 2.5, 22.0, 18.0],
+                                backgroundColor: ['#00f59b', '#f43f5e', '#fbbf24', '#64748b'],
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                            y: { ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                        }
+                    }
+                });
+            }
+
+            const radarCtx = document.getElementById('readinessRadarChart');
+            if (radarCtx && !radarChartInstance) {
+                radarChartInstance = new Chart(radarCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['High-Altitude Access', 'Turnaround Speed', 'EW Jamming Resilience', 'Payload / Cost Efficiency', 'Zero-Footprint Landing', 'All-Weather Ops'],
+                        datasets: [
+                            {
+                                label: 'Indigenous Drone Fleet',
+                                data: [95, 98, 92, 96, 99, 90],
+                                borderColor: '#00f0ff',
+                                backgroundColor: 'rgba(0, 240, 255, 0.25)',
+                                pointBackgroundColor: '#00f0ff'
+                            },
+                            {
+                                label: 'Conventional Logistics',
+                                data: [55, 30, 45, 40, 20, 35],
+                                borderColor: '#ffb703',
+                                backgroundColor: 'rgba(255, 183, 3, 0.15)',
+                                pointBackgroundColor: '#ffb703'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } }
+                        },
+                        scales: {
+                            r: {
+                                angleLines: { color: 'rgba(255,255,255,0.1)' },
+                                grid: { color: 'rgba(255,255,255,0.08)' },
+                                pointLabels: { color: '#cbd5e1', font: { family: 'JetBrains Mono', size: 9 } },
+                                ticks: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        /* ================= Fleet Filtering ================= */
+        function filterFleet(category) {
+            playBeep(800, 'sine', 0.05);
+            document.querySelectorAll('.fleet-filter-btn').forEach(btn => {
+                btn.className = 'fleet-filter-btn px-2.5 py-1 rounded bg-tactical-800 text-gray-400 hover:text-white';
+            });
+            event.currentTarget.className = 'fleet-filter-btn px-2.5 py-1 rounded bg-tactical-accent/20 text-tactical-accent border border-tactical-accent/40 font-bold';
+
+            document.querySelectorAll('.fleet-card').forEach(card => {
+                if (category === 'all' || card.getAttribute('data-category') === category) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        /* ================= Subsystem Dossier Inspector ================= */
+        const subsystemData = {
+            navic: {
+                title: "NavIC + Optical Inertial Odometry (VIO)",
+                status: "100% INDIGENOUS (DRDO / ISRO)",
+                m1: "< 0.42 Meters",
+                m2: "100% Autonomous",
+                m3: "NavIC L5 / S-Band",
+                desc: "<p>The navigation architecture combines sovereign NavIC dual-frequency receivers with down-looking stereo optical flow cameras and solid-state LiDAR terrain matching. In the event of aggressive adversary GPS spoofing or electronic warfare jamming, the flight computer shifts to optical landmark recognition, matching terrain topology to pre-loaded high-resolution DEM.</p><p>Eliminates foreign satellite dependency and delivers pin-point payload delivery accuracy directly onto a 2-meter mountain helipad in zero-visibility conditions.</p>",
+                domestic: "98.2% Indigenized",
+                pct: "98.2%"
+            },
+            propulsion: {
+                title: "Indigenous Micro-Turbine & Cold-Start Powerpack",
+                status: "TRL-8 FLIGHT CERTIFIED",
+                m1: "15 kW Generator",
+                m2: "-40Â°C Cold Start",
+                m3: "Kerosene / Jet-A1",
+                desc: "<p>Developed with indigenous ultra-lightweight micro gas-turbines acting as continuous high-density range extenders. Coupled with cold-resistant solid-state battery banks that feature internal heating circuits to maintain 100% discharge capacity even during brutal Himalayan blizzards.</p><p>Ensures sustained 2-hour hovering and multi-ridge traverse capabilities without payload degradation.</p>",
+                domestic: "92.5% Indigenized",
+                pct: "92.5%"
+            },
+            airframe: {
+                title: "Carbon-Kevlar Aerostructure with Thermal De-Icing",
+                status: "LIGHTWEIGHT COMPOSITE",
+                m1: "3.2x Strength/Weight",
+                m2: "Active Rotor Heating",
+                m3: "Radar Cross Section: 0.04 mÂ²",
+                desc: "<p>Autoclave-cured high-modulus carbon fiber reinforced polymer (CFRP) airframe with embedded electro-thermal heating meshes inside rotor blades. Automatically dissolves freezing rime ice during cloud transitions at 18,000 ft.</p><p>Low acoustic signature and minimal radar cross-section protect the drone from adversary forward acoustic sensors and MANPADS radar detection.</p>",
+                domestic: "96.0% Indigenized",
+                pct: "96%"
+            },
+            payload: {
+                title: "Autonomous Smart Winch & Quick-Eject Cargo Bay",
+                status: "ZERO-LANDING FOOTPRINT",
+                m1: "30m Winch Tether",
+                m2: "Automatic Unhook",
+                m3: "Cold-Chain Thermal Bay",
+                desc: "<p>Enables standoff supply deliveries without touching the ground, protecting the UAV from rocky alpine debris, steep slope rollover, and ground personnel contact. Laser rangefinder senses ground proximity and decouples cargo latch in under 2.5 seconds.</p><p>Equipped with vacuum-insulated medical compartments for blood plasma and temperature-sensitive biologicals.</p>",
+                domestic: "94.5% Indigenized",
+                pct: "94.5%"
+            },
+            cyber: {
+                title: "Anti-Jam Quantum-Resistant C2 Datalink",
+                status: "SECURE MIL-STD PROTOCOL",
+                m1: "AES-256 / Post-Quantum",
+                m2: "FHSS 1,000 hops/sec",
+                m3: "Optical Comms Backup",
+                desc: "<p>Ultra-secure frequency-hopping spread spectrum (FHSS) tactical datalink operating across UHF/L/C bands. Features automated frequency jumping whenever jamming energy exceeds threshold limits, with zero packet corruption.</p><p>Full software autonomy ensures uninterrupted return-to-base execution even during total electronic warfare blackout.</p>",
+                domestic: "99.0% Indigenized",
+                pct: "99%"
+            }
+        };
+
+        function inspectSubsystem(key) {
+            playBeep(900, 'sine', 0.06);
+            document.querySelectorAll('.subsystem-btn').forEach(btn => {
+                btn.className = 'subsystem-btn w-full text-left p-3 rounded bg-tactical-800/80 hover:bg-tactical-800 text-gray-300 border border-tactical-700/50 transition-all flex items-center space-x-3';
+            });
+            const active = document.getElementById('sub-btn-' + key);
+            if (active) active.className = 'subsystem-btn w-full text-left p-3 rounded bg-tactical-accent/20 border border-tactical-accent text-white transition-all flex items-center space-x-3';
+
+            const data = subsystemData[key];
+            if (data) {
+                document.getElementById('sub-title').innerText = data.title;
+                document.getElementById('sub-status').innerText = data.status;
+                document.getElementById('sub-metric1').innerText = data.m1;
+                document.getElementById('sub-metric2').innerText = data.m2;
+                document.getElementById('sub-metric3').innerText = data.m3;
+                document.getElementById('sub-description').innerHTML = data.desc;
+                document.getElementById('sub-domestic-pct').innerText = data.domestic;
+                document.getElementById('sub-progress-bar').style.width = data.pct;
+            }
+        }
+
+        /* ================= OPORD Modal & Briefing Export ================= */
+        function exportMissionReport() {
+            playBeep(1100, 'triangle', 0.1);
+            document.getElementById('opord-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('opord-modal').classList.add('hidden');
+        }
+
+        // Initialize default state
+        window.addEventListener('DOMContentLoaded', () => {
+            calculateMissionPhysics();
+        });
+    </script>
+</body>
+</html>
